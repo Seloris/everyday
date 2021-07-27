@@ -40,6 +40,36 @@ namespace Common.Tests
                 ChildProp = childProp;
             }
         }
+        public class WithIndexer
+        {
+            private Dictionary<string, int> _internalData;
+
+            public WithIndexer(int a, int b)
+            {
+                _internalData = new Dictionary<string, int>()
+                {
+                    ["a"] = a,
+                    ["b"] = b
+                };
+            }
+
+            public int A
+            {
+                get => Getter("a");
+                set => Setter("a", value);
+            }
+
+            public int B
+            {
+                get => Getter("b");
+                set => Setter("b ", value);
+            }
+
+            public int this[string index] => Getter(index);
+
+            private int Getter(string key) => _internalData.TryGetValue(key, out int value) ? value : 0;
+            private void Setter(string key, int value) => _internalData[key] = value;
+        }
 
 
         [Fact]
@@ -210,24 +240,30 @@ namespace Common.Tests
             var withOneMoreValue = new Dictionary<string, string> { ["a"] = "a", ["b"] = "b" };
             var sameSizeDifferentKey = new Dictionary<string, string> { ["b"] = "a" };
             var sameSizeDifferentValue = new Dictionary<string, string> { ["a"] = "b" };
+            var propWithIndexerA = new WithIndexer(1, 2);
+            var propWithIndexerB = new WithIndexer(1, 3);
 
             var baselineObj = new RootWithChild<Dictionary<string, string>>(baseline);
             var emptyObj = new RootWithChild<Dictionary<string, string>>(empty);
             var withOneMoreValueObj = new RootWithChild<Dictionary<string, string>>(withOneMoreValue);
             var sameSizeDifferentKeyObj = new RootWithChild<Dictionary<string, string>>(sameSizeDifferentKey);
             var sameSizeDifferentValueObj = new RootWithChild<Dictionary<string, string>>(sameSizeDifferentValue);
+            var propWithIndexerObjA = new RootWithChild<WithIndexer>(propWithIndexerA);
+            var propWithIndexerObjB = new RootWithChild<WithIndexer>(propWithIndexerB);
 
             // Act
             PropertyCompareResult[] emptyDiffs = ObjectComparer.Compare(baselineObj, emptyObj);
             PropertyCompareResult[] withOneMoreValueDiffs = ObjectComparer.Compare(baselineObj, withOneMoreValueObj);
             PropertyCompareResult[] sameSizeDifferentValueDiffs = ObjectComparer.Compare(baselineObj, sameSizeDifferentKeyObj);
             PropertyCompareResult[] sameSizeDifferentKeyDiffs = ObjectComparer.Compare(baselineObj, sameSizeDifferentValueObj);
+            PropertyCompareResult[] propWithIndexerObjDiffs = ObjectComparer.Compare(propWithIndexerObjA, propWithIndexerObjB);
 
             // Assert
             emptyDiffs.Should().Contain(new PropertyCompareResult("Child", baseline, empty));
             withOneMoreValueDiffs.Should().Contain(new PropertyCompareResult("Child", baseline, withOneMoreValue));
             sameSizeDifferentValueDiffs.Should().Contain(new PropertyCompareResult("Child", baseline, sameSizeDifferentKey));
             sameSizeDifferentKeyDiffs.Should().Contain(new PropertyCompareResult("Child[a]", baseline["a"], sameSizeDifferentValue["a"]));
+            propWithIndexerObjDiffs.Should().Contain(new PropertyCompareResult("Child.B", 2, 3));
         }
 
         [Fact]

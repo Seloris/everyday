@@ -11,9 +11,12 @@ namespace Everyday.Common
         public static PropertyCompareResult[] Compare<T>(T oldObject, T newObject, string propName = "")
         {
             List<PropertyCompareResult> results = new List<PropertyCompareResult>();
-            var type = oldObject.GetType();
+            Type type = oldObject?.GetType();
 
-            if (IsEnumerable(type))
+            if ((oldObject == null && newObject != null) || (oldObject != null && newObject == null))
+                results.Add(new PropertyCompareResult(propName, oldObject, newObject));
+            else if (oldObject == null && newObject == null) { }
+            else if (IsEnumerable(type))
             {
                 if (oldObject is IDictionary oldDic)
                 {
@@ -36,7 +39,8 @@ namespace Everyday.Common
             }
             else if (HasPropertiesToFetch(type))
             {
-                foreach (PropertyInfo propInfo in type.GetProperties())
+                // avoid static and indexer get Item
+                foreach (PropertyInfo propInfo in type.GetProperties().Where(x => !x.GetMethod.IsStatic && x.GetMethod.Name != "get_Item"))
                 {
                     var nextPropName = propName != "" ? $"{propName}.{propInfo.Name}" : propInfo.Name;
                     results.AddRange(Compare(propInfo.GetValue(oldObject), propInfo.GetValue(newObject), nextPropName));
@@ -49,12 +53,10 @@ namespace Everyday.Common
                     results.Add(new PropertyCompareResult(propName, oldObject, newObject));
             }
 
-
             return results.ToArray();
         }
 
         private static bool IsEnumerable(Type t) => (t.IsArray || typeof(ICollection).IsAssignableFrom(t)) && t.FullName != "System.String";
-
         private static bool HasPropertiesToFetch(Type t) => t.IsClass && !t.IsValueType && !t.IsPrimitive && t.FullName != "System.String";
     }
 
